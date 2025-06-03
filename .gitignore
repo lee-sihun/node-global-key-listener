@@ -106,7 +106,6 @@ dist
 
 .parcel-cache/
 
-build/
 dist/
 
 eslintLog.tap

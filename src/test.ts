@@ -1,4 +1,5 @@
 import {GlobalKeyboardListener} from ".";
+import { KeyboardUtils } from "./ts/utils/KeyboardUtils";
 
 const v = new GlobalKeyboardListener({
     windows: {
@@ -10,43 +11,25 @@ const v = new GlobalKeyboardListener({
         onInfo: info => console.info("INFO: " + info),
     },
 });
+
 v.addListener(function (e, down) {
+    const enhancedName = KeyboardUtils.getEnhancedKeyName(e);
+    const location = KeyboardUtils.getKeyLocation(e);
+    const debugInfo = KeyboardUtils.getDebugInfo(e);
+
     console.log(
-        e.name?.padStart(16),
+        (e.name || 'UNKNOWN').padStart(15),
         e.state.padStart(4),
-        e.rawKey?._nameRaw.padStart(32),
-        e.location?.map(x => x.toFixed(2)).join(' ').padStart(32),
+        e.isExtended ? '[MAIN]' : '[NUMPAD]',
+        `VK:0x${e.vKey.toString(16)}`
     );
-
-    if (
-        e.state == "DOWN" &&
-        e.name == "SPACE" &&
-        (down["LEFT META"] || down["RIGHT META"])
-    ) {
-        console.log("captured");
-        return true;
-    }
-    if (e.state == "DOWN" && e.name == "I" && (down["LEFT META"] || down["RIGHT META"])) {
-        console.log("captured");
-        return true;
-    }
-    if (e.state == "DOWN" && e.name == "F") {
-        // && (down["LEFT ALT"] || down["RIGHT ALT"])) {
-        console.log("captured attempted");
-        const start = Date.now();
-        while (Date.now() - start < 3000);
-
-        return true;
+    
+    // Insert 키 구분
+    if (e.state === "DOWN" && e.vKey === 0x2D) {
+        console.log(e.isExtended ? "메인 Insert!" : "넘버패드 Insert!");
     }
 
-    if (e.state == "DOWN" && e.name == "M") {
-        return true;
-    }
-    if (e.state == "DOWN" && e.name == "N") {
-        throw "Shit";
-        console.log("captured");
-        return true;
-    }
-})
-    .then(() => console.log("Success"))
-    .catch(e => console.log("Error: " + e));
+    console.log(e.isExtended);
+
+    console.log(`enhancedName: ${enhancedName}, location: ${location}, debugInfo: ${debugInfo}`);
+});

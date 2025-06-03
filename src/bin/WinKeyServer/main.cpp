@@ -328,7 +328,7 @@ std::string output = "";
  *  Expects "1\n" (halt propogation of event) or "0\n" (do not halt propogation of event)
  * @remark This function timeouts after  30ms and returns false in order to propogate the event to the rest of the OS.
  */
-bool haltPropogation(bool isMouse, bool isDown, DWORD vkCode, DWORD scanCode, POINT location, bool isExtended = false)
+bool haltPropogation(bool isMouse, bool isDown, DWORD vkCode, DWORD scanCode, POINT location, bool isExtended)
 {
     curId = curId + 1;
     if (isMouse)

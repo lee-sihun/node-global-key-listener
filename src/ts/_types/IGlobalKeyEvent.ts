@@ -13,5 +13,6 @@ export type IGlobalKeyEvent = {
     state: "DOWN" | "UP";
     scanCode: number;
     location?: [ x: number, y: number ];
+    isExtended?: boolean;
     _raw: string;
 };

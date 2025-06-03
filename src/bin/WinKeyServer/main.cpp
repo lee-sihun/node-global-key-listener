@@ -25,7 +25,7 @@ Description:
     37,UP,0,8
     31,DOWN,0,9
     31,UP,0,10
-  
+
   Note: the format of the information is as follows:
     VirtualKeyCode,UpDownState,ScanCode,EventID
   p.s. ScanCode has been removed (is 0) from the above for documentation purposes only.
@@ -38,7 +38,7 @@ Description:
     4,DOWN,35,5
     4,DOWN,35,6
     4,UP,35,7
-  
+
   The calling process should send "1,{id}\n" if it wants the tap to block the keypress and "0,{id}\n"
   if it wants the tap to propogate the keypress to the rest of the system (where {id} is the integer id received).
 
@@ -50,9 +50,9 @@ Notes:
   In order to prevent the start menu from opening up, we send an artifical VK_HELP key up event, whenever capturing a key while the
   windows key is pressed down. This also applies to the alt key. When this occurs a message "Sending VK_HELP to prevent win_key_up
   triggering start menu" is also send to stderr.
-  * The hook procedure should process a message in less time than the data entry specified in the `LowLevelHooksTimeout` value in the 
+  * The hook procedure should process a message in less time than the data entry specified in the `LowLevelHooksTimeout` value in the
   registry key `HKEY_CURRENT_USER\Control Panel\Desktop`. Note this is sometimes undefined and thus the timeout is an undocumented
-  amount of time. If the hook procedure times out, the hook is silently removed without being called and there is no way for the 
+  amount of time. If the hook procedure times out, the hook is silently removed without being called and there is no way for the
   application to know whether the hook is removed or not. In order to accommodate for this timeout, our process requires all
   keystrokes to respond within 30ms of dispatch. If your process does not respond within 30ms the event will be propogated to the
   rest of the system.
@@ -67,10 +67,10 @@ Compilation:
 
 */
 
-//How long to wait before timing out a key response
+// How long to wait before timing out a key response
 int timeoutTime = 30;
 
-POINT zeroPoint { 0, 0 };
+POINT zeroPoint{0, 0};
 
 /**
  * HEADERS
@@ -84,7 +84,7 @@ enum KeyState
 void MessageLoop();
 __declspec(dllexport) LRESULT CALLBACK KeyboardEvent(int nCode, WPARAM wParam, LPARAM lParam);
 __declspec(dllexport) LRESULT CALLBACK MouseEvent(int nCode, WPARAM wParam, LPARAM lParam);
-bool haltPropogation(bool isMouse, bool isDown, DWORD vkCode, DWORD scanCode, POINT location);
+bool haltPropogation(bool isMouse, bool isDown, DWORD vkCode, DWORD scanCode, POINT location, bool isExtended = false);
 KeyState getKeyState(WPARAM wParam);
 DWORD getMouseButtonCode(WPARAM wParam);
 void printErr(const char *str);
@@ -113,27 +113,27 @@ bool bIsAltDown;
  */
 int main(int argc, char **argv)
 {
-    //Get module instance handle
+    // Get module instance handle
     HINSTANCE hInstance = GetModuleHandle(NULL);
     if (!hInstance)
         return 1;
 
-    //Create threads to deal with input
+    // Create threads to deal with input
     HANDLE timeoutThread = CreateThread(NULL, 0, timeoutLoop, NULL, 0, NULL);
     HANDLE inputThread = CreateThread(NULL, 0, checkInputLoop, NULL, 0, NULL);
 
-    //Hook to global keyboard events
+    // Hook to global keyboard events
     hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)KeyboardEvent, hInstance, 0);
     hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)MouseEvent, hInstance, 0);
 
-    //Wait app is closed
+    // Wait app is closed
     MessageLoop();
 
-    //Unhook from global keyboard events
+    // Unhook from global keyboard events
     UnhookWindowsHookEx(hKeyboardHook);
     UnhookWindowsHookEx(hMouseHook);
 
-    //Dispose the threads
+    // Dispose the threads
     CloseHandle(timeoutThread);
     CloseHandle(inputThread);
 
@@ -147,18 +147,21 @@ int main(int argc, char **argv)
  */
 __declspec(dllexport) LRESULT CALLBACK KeyboardEvent(int nCode, WPARAM wParam, LPARAM lParam)
 {
-    //If key is up or down
+    // If key is up or down
     KeyState ks = getKeyState(wParam);
     if ((nCode == HC_ACTION) && ks)
     {
         KBDLLHOOKSTRUCT key = *((KBDLLHOOKSTRUCT *)lParam);
 
-        //Stop propogation if needed using stdio messaging. 1st param is casted lPARAM.
-        //Returning 1 from this function will halt propogation
-        if (haltPropogation(false, ks == down, key.vkCode, key.scanCode, zeroPoint))
+        // 확장 키 플래그 추출 (scanCode의 상위 비트에서 확장 정보 확인)
+        bool isExtended = (key.flags & LLKHF_EXTENDED) != 0;
+
+        // Stop propogation if needed using stdio messaging. 1st param is casted lPARAM.
+        // Returning 1 from this function will halt propogation
+        if (haltPropogation(false, ks == down, key.vkCode, key.scanCode, zeroPoint, isExtended))
         {
-            //fixes issue https://github.com/LaunchMenu/node-global-key-listener/issues/3
-            //TODO: maybe there is a better fix for this which doesn't involve sending arbitrary key events?
+            // fixes issue https://github.com/LaunchMenu/node-global-key-listener/issues/3
+            // TODO: maybe there is a better fix for this which doesn't involve sending arbitrary key events?
             if (bIsMetaDown || bIsAltDown)
             {
                 printErr("Sending VK_HELP to prevent win_key_up triggering start menu");
@@ -168,7 +171,7 @@ __declspec(dllexport) LRESULT CALLBACK KeyboardEvent(int nCode, WPARAM wParam, L
         }
         else
         {
-            //Work around for Windows key behaviour. See github issue #3
+            // Work around for Windows key behaviour. See github issue #3
             if (key.vkCode == VK_LWIN || key.vkCode == VK_RWIN)
                 bIsMetaDown = ks == down;
             if (key.vkCode == VK_LMENU || key.vkCode == VK_RMENU)
@@ -185,15 +188,15 @@ __declspec(dllexport) LRESULT CALLBACK KeyboardEvent(int nCode, WPARAM wParam, L
  */
 __declspec(dllexport) LRESULT CALLBACK MouseEvent(int nCode, WPARAM wParam, LPARAM lParam)
 {
-    MOUSEHOOKSTRUCT * pMouseStruct = (MOUSEHOOKSTRUCT *)lParam;
+    MOUSEHOOKSTRUCT *pMouseStruct = (MOUSEHOOKSTRUCT *)lParam;
     KeyState ks = getKeyState(wParam);
     DWORD vCode = getMouseButtonCode(wParam);
 
     if (nCode >= 0 && pMouseStruct != NULL && ks && vCode)
     {
-        //Stop propogation if needed using stdio messaging. 1st param is casted lPARAM.
-        //Returning 1 from this function will halt propogation
-        if (haltPropogation(true, ks == down, vCode, vCode, pMouseStruct->pt))
+        // Stop propogation if needed using stdio messaging. 1st param is casted lPARAM.
+        // Returning 1 from this function will halt propogation
+        if (haltPropogation(true, ks == down, vCode, vCode, pMouseStruct->pt, false))
         {
             return 1;
         }
@@ -325,10 +328,17 @@ std::string output = "";
  *  Expects "1\n" (halt propogation of event) or "0\n" (do not halt propogation of event)
  * @remark This function timeouts after  30ms and returns false in order to propogate the event to the rest of the OS.
  */
-bool haltPropogation(bool isMouse, bool isDown, DWORD vkCode, DWORD scanCode, POINT location)
+bool haltPropogation(bool isMouse, bool isDown, DWORD vkCode, DWORD scanCode, POINT location, bool isExtended = false)
 {
     curId = curId + 1;
-    printf("%s,%s,%i,%i,%ld,%ld,%i\n", (isMouse ? "MOUSE" : "KEYBOARD"), (isDown ? "DOWN" : "UP"), vkCode, scanCode, location.x, location.y, curId);
+    if (isMouse)
+    {
+        printf("%s,%s,%i,%i,%ld,%ld,%i,0\n", "MOUSE", (isDown ? "DOWN" : "UP"), vkCode, scanCode, location.x, location.y, curId);
+    }
+    else
+    {
+        printf("%s,%s,%i,%i,%ld,%ld,%i,%i\n", "KEYBOARD", (isDown ? "DOWN" : "UP"), vkCode, scanCode, location.x, location.y, curId, isExtended ? 1 : 0);
+    }
     fflush(stdout);
 
     // Indicate when the next timeout should occur

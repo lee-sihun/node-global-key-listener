@@ -76,15 +76,18 @@ export class WinKeyServer implements IGlobalKeyServer {
                 sLocationX,
                 sLocationY,
                 eventId,
+                sIsExtended,
             ] = lineData.split(",");
 
             const isDown = downUp === 'DOWN';
+            const isMouse = _mouseKeyboard === 'MOUSE';
 
             const keyCode = Number.parseInt(sKeyCode, 10);
             const scanCode = Number.parseInt(sScanCode, 10);
 
             const locationX = Number.parseFloat(sLocationX);
             const locationY = Number.parseFloat(sLocationY);
+            const isExtended = sIsExtended === '1';
 
             const key = WinGlobalKeyLookup[keyCode];
 
@@ -96,6 +99,7 @@ export class WinKeyServer implements IGlobalKeyServer {
                     state: isDown ? "DOWN" : "UP",
                     scanCode: scanCode,
                     location: [ locationX, locationY ],
+                    isExtended: isMouse ? undefined : isExtended, // 마우스 이벤트에는 확장 키 정보 없음
                     _raw: sData,
                 },
                 eventId,

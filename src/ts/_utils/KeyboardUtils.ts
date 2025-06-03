@@ -31,6 +31,11 @@ export class KeyboardUtils {
             return 'unknown'; // 마우스 이벤트 또는 확장 정보 없음
         }
 
+        // Enter 키는 다른 키들과 반대 패턴
+        if (event.vKey === 0x0D) { // VK_RETURN (Enter)
+            return event.isExtended ? 'numpad' : 'main';
+        }
+
         // 메인 키보드와 넘버패드에 공통으로 있는 키들의 VK 코드
         const dualLocationKeys = new Map([
             [0x2D, 'INSERT'],     // VK_INSERT
@@ -43,7 +48,7 @@ export class KeyboardUtils {
             [0x26, 'UP'],         // VK_UP
             [0x27, 'RIGHT'],      // VK_RIGHT
             [0x28, 'DOWN'],       // VK_DOWN
-            [0x0D, 'ENTER'],      // VK_RETURN (Enter)
+            [0x0C, 'CLEAR'],      // VK_CLEAR
         ]);
 
         if (dualLocationKeys.has(event.vKey)) {
@@ -161,4 +166,4 @@ export class KeyboardUtils {
             `State: ${event.state}`,
         ].join(' | ');
     }
-}
+}12

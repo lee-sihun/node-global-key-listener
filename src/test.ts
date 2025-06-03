@@ -1,5 +1,5 @@
 import {GlobalKeyboardListener} from ".";
-import { KeyboardUtils } from "./ts/utils/KeyboardUtils";
+import { KeyboardUtils } from "./ts/_utils/KeyboardUtils";
 
 const v = new GlobalKeyboardListener({
     windows: {

@@ -7,6 +7,7 @@ export * from "./ts/_types/IGlobalKey";
 export * from "./ts/_types/IGlobalKeyDownMap";
 export * from "./ts/_types/IWindowsConfig";
 export * from "./ts/_types/IConfig";
+export { KeyboardUtils } from './ts/_utils/KeyboardUtils';
 /**
  * A cross-platform global keyboard listener. Ideal for setting up global keyboard shortcuts
  * and key-loggers (usually for automation).

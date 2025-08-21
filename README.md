@@ -1,194 +1,51 @@
-# ARCHIVE NOTICE
+# node-global-key-listener-extended
 
-## TL;DR - This project is looking for maintainers
+Node.js 환경에서 전역 키보드 이벤트를 후킹할 수 있는 패키지입니다.
 
-If:
+오픈소스 키뷰어 [DM Note](https://github.com/lee-sihun/djmax-keyviewer) 개발에 사용하기 위한 목적으로 [LaunchMenu/node-global-key-listener](https://github.com/LaunchMenu/node-global-key-listener)에서 포크되었습니다.
 
-1. you have experience with any of the following:
-    * Node-TypeScript
-    * Keyboard hooking on Windows (current implementation in C++)
-    * Keyboard hooking on Mac (current implementation in Swift)
-    * Keyboard hooking on Linux (current X11 implementation in C++)
-    * Publishing NPM packages
- 2. Own a Windows, Mac or Linux machine.
- 3. Are interested in maintaining an open source project (e.g. testing PRs on the system, fixing issues)
+## 변경점
 
-Please [apply to become a maintainer](https://github.com/LaunchMenu/NGKL-MaintainerApplications). Otherwise this repo will remain archived.
+이 라이브러리는 [LaunchMenu/node-global-key-listener](https://github.com/LaunchMenu/node-global-key-listener)를 기반으로 다음과 같은 개선 사항과 변경점이 적용되었습니다.
 
-## Thanks & Goodbye
+| 기능              | node-global-key-listener                                           | node-global-key-listener-extended                   |
+| :---------------- | :------------------------------------------------------------------ | :-------------------------------------------- |
+| **동작 방식**     | 별도의 `WinKeyServer.exe` 실행 (out-of-process)                      | 네이티브 애드온 (in-process)                 |
+| **키 위치 구분**  | 메인 키보드와 넘버패드의 동일 키 구분 불가능 (예: Enter, Insert)      | 위치 구분 지원 (`isExtended` 플래그 추가) |
+| **이벤트 필터링** | 일부 키 조합에서 비정상적인 이벤트 발생                            | 비정상적인 이벤트 필터링      |
+| **유틸리티**      | 유틸리티 함수 부재                                              | `KeyboardUtils` 제공 |
+| **플랫폼 지원**   | Windows, Mac, Linux                                               | **Windows 전용**              |
 
-This project was created as a result of the stability concerns for other NodeJS keyboard hooking projects, and initially for use with LaunchMenu. At the beginning we were investing heavily in [launchmenu](http://launchmenu.github.io), however unfortunately this project didn't kick off and the maintainers @TarVK and @Sancarn have moved onto bigger and better things. At this stage, it's been many years since this project has been actively maintained, and the previous stability of this project has been deteriating (see #36, #41, #34, #23). Thusly we sadly feel compelled to archive this project until new serious maintainers for this project hop on board.
+<!--
+### 상세 변경 내역
 
-Thanks everyone for using this project, and we hope you get use out of the old stable versions.
+#### 1. 네이티브 애드온(DLL) 방식으로 완전 전환
 
-# node-global-key-listener
+-   **문제점:** 기존의 `WinKeyServer.exe`를 별도 프로세스로 실행하는 방식은 일부 바이러스 백신에서 악성 행위로 오탐하는 문제가 있었습니다.
+-   **해결책:** 모든 키 후킹 로직을 C++ 네이티브 애드온(`.node` 파일)으로 구현했습니다. 이제 모든 코드가 Node.js 프로세스 내부에서 직접 실행되므로, 바이러스 오탐 문제를 근본적으로 해결하고 성능을 크게 향상시켰습니다.
 
-## Description
+#### 2. 비정상적인 Shift 키 이벤트 필터링
 
-A simple, cross-platform NodeJS package which can be used to listen to and capture keyboard events.
+-   **문제점:** NumLock이 켜진 상태에서 Shift 키를 누른 채로 넘버패드 키를 입력하면, 원치 않는 가상 Shift 키 이벤트가 반복적으로 발생하여 키 입력이 깜빡이는 현상이 있었습니다.
+-   **해결책:** Windows 시스템에서 발생하는 비정상적인 스캔 코드(`554`)를 가진 가상 Shift 이벤트를 감지하고 필터링하는 로직을 추가하여, 더 정확하고 안정적인 키 입력을 보장합니다. (관련 커밋: `f88ded3`)
 
-Compatibility table:
+#### 3. 확장 키(Extended Key) 정보 추가
 
-| Platform | Compatible?     | Tested        |
-| -------- | --------------- | ------------- |
-| Windows  | True            | Win10         |
-| Mac      | True            | Mac OS Mojave |
-| Linux    | X11 only        | Arch Linux    |
+-   **문제점:** 원본 라이브러리는 메인 키보드의 `Enter`와 넘버패드의 `Enter`를 구분할 수 없었습니다. `Insert`, `Delete` 등 다른 키들도 마찬가지였습니다.
+-   **해결책:** Windows의 확장 키 플래그(`isExtended`) 정보를 이벤트 객체에 포함시켰습니다. 이를 통해 메인 키보드의 특수 키와 넘버패드의 동일한 키를 명확하게 구분할 수 있게 되었습니다. (관련 커밋: `5055e98`)
 
-This keyboard listener was originally made for the productivity application, [LaunchMenu](http://launchmenu.github.io/).
+#### 4. `KeyboardUtils` 유틸리티 추가
 
-## Usage
+-   `isExtended` 플래그를 더 쉽게 활용할 수 있도록 `KeyboardUtils` 클래스를 추가했습니다. 이 유틸리티를 사용하면 키의 정확한 위치(`main` 또는 `numpad`)를 쉽게 판별하고, 위치 정보가 포함된 향상된 키 이름을 얻을 수 있습니다. (관련 커밋: `b46ed5a`)
 
-```ts
-import {GlobalKeyboardListener} from "node-global-key-listener";
-const v = new GlobalKeyboardListener();
+```typescript
+import {KeyboardUtils} from "node-global-key-listener";
 
-//Log every key that's pressed.
 v.addListener(function (e, down) {
-    console.log(
-        `${e.name} ${e.state == "DOWN" ? "DOWN" : "UP  "} [${e.rawKey._nameRaw}]`
-    );
-});
-
-//Capture Windows + Space on Windows and Command + Space on Mac
-v.addListener(function (e, down) {
-    if (
-        e.state == "DOWN" &&
-        e.name == "SPACE" &&
-        (down["LEFT META"] || down["RIGHT META"])
-    ) {
-        //call your function
-        return true;
+    // 넘버패드 Enter 키만 감지하고 싶을 때
+    if (KeyboardUtils.isKeyAtLocation(e, "ENTER", "numpad")) {
+        console.log("넘버패드 Enter 키 감지!");
     }
 });
-
-//Capture ALT + F
-v.addListener(function (e, down) {
-    if (e.state == "DOWN" && e.name == "F" && (down["LEFT ALT"] || down["RIGHT ALT"])) {
-        //call your function
-        return true;
-    }
-});
-
-//Call one listener only once (demonstrating removeListener())
-calledOnce = function (e) {
-    console.log("only called once");
-    v.removeListener(calledOnce);
-};
-v.addListener(calledOnce);
-
-/* 
- To add logging of errors please use. This is hopefully not needed in most cases, but may still be useful in production.
-    new GlobalKeyboardListener({
-        windows: {
-            onError: (errorCode) => console.error("ERROR: " + errorCode),
-            onInfo: (info) => console.info("INFO: " + info)
-        },
-        mac: {
-            onError: (errorCode) => console.error("ERROR: " + errorCode),
-        }
-    })
-*/
 ```
-
-## Installation
-
-To install this npm package call:
-
-```
-npm install node-global-key-listener
-```
-
-## Is this the right package for you?
-
-NodeJS has various packages for listening to keyboard events raised in the operating system. We may not have created the best package for you, please use the below descriptions to aid you in making your decision:
-
-### Electron::globalShortcut
-
-#### Advantages:
-
--   Native to electron apps
--   No compiling issues with Node-gyp
--   All execution occurs in-process
-
-#### Disadvantages:
-
--   On Windows: Cannot override windows specific shortcuts. E.G. Ctrl+Alt+Delete or Windows+Space etc.
--   On Mac: Will not prevent other applications from listening for events
--   Cannot easily be used to listen for arbitrary keys
--   Requires electron in order to function.
-
-### [IOHook](https://www.npmjs.com/package/iohook)
-
-#### Advantages:
-
--   All execution occurs in-process
--   On Windows: Allows capture of windows specific shortcuts. E.G. Ctrl+Alt+Delete or Windows+Space etc.
--   On Mac: Prevents other applications from listening for captured events.
-
-#### Disadvantages:
-
--   Cannot easily be used to listen for arbitrary keys
--   Requires compilation with node-gyp. Sometimes the package is released with binaries, however these binaries need to be compiled seperately for each version of node. Furthermore, when compile errors occur the code given is a black box which you will need to fix, which may be complex if you're not used to the languages they are written in.
-
-### [node-global-key-listener](https://www.npmjs.com/package/node-global-key-listener)
-
-#### Advantages:
-
--   Easy to setup as an arbitrary key listener/logger.
--   Does not require node-gyp. Our package comes with pre-compiled binaries which are compatible with your OS and not dependent on node version.
--   On Windows: Allows capture of windows specific shortcuts. E.G. Ctrl+Alt+Delete or Windows+Space etc.
--   On Mac: Prevents other applications from listening for captured events.
-
-#### Disadvantages:
-
--   Most execution occurs out-of-process. Our package executes and runs a seperate key server which NodeJS interfaces with over stdio. This means that this application might require permission to run depending on your anti-virus system.
--   Some workarounds used may rarely lead to unexpected functionality, see windows specific implementation of windows key listeners
--   If installed into an application on Mac explicit permission will be required from the user via Accessibility.
-
-## Developement
-
-If modifying the typescript code you will have to run the following command in a terminal in the root directory of this package:
-
-```
-npm run watch
-```
-
-This will cause the application to recompile the typescript whenever the source code is changed. If you are making a change to an application for a single system, please consider adding these changes to both keyboard servers if possible. Generally we will work on both simultaneiously however we know this is not always possible.
-
-### Modifying the compiled binaries
-
-To modify the Windows `C++` or Mac `Swift` source code please compile these applications before testing with:
-
-#### Pre-requisites
-
-##### Windows
-
-This project is configured to use [mingw](https://sourceforge.net/projects/mingw/), and thus this should be installed before compiling the source code.
-
-#### Compiling the binary code
-
-To compile the source code of these applications use the below command line commands respective to the system you are working on.
-
-##### Windows
-
-```
-npm run compile-win
-```
-
-##### Mac
-
-```
-npm run compile-mac
-```
-
-##### Linux (X11)
-
-```
-npm run compile-x11
-```
-
-## Notes
-
--   If Including this package into an Electron application, the built application will require explicit permission from the user on Mac OS X systems.
--   Given that a fallback may be required we may release an `electron-global-key-listener` package to accommodate this in the future. In our case for LaunchMenu, our fallback is implemented in [`core/keyHandler`](https://github.com/LaunchMenu/LaunchMenu/blob/master/packages/core/src/keyHandler/globalKeyHandler/globalKeyHandler.ts).
+-->

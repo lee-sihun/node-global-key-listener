@@ -1,7 +1,6 @@
 {
     "compilerOptions": {
         "moduleResolution": "node",
-        "rootDir": "src/",
         "outDir": "dist/",
         "inlineSourceMap": true,
         "declaration": true,

@@ -30,12 +30,24 @@ export class WinKeyServer implements IGlobalKeyServer {
 
         // 네이티브 애드온 로드
         try {
-            this.nativeAddon = require(Path.join(
-                __dirname,
-                "../../build/Release/addon.node"
-            ));
+            // 빌드 후 'addon.node' 파일은 'dist' 폴더에 복사됩니다.
+            // 이 파일(WinKeyServer.js)은 'dist/ts/'에 위치하므로,
+            // addon.node에 접근하기 위한 상대 경로는 '../addon.node'가 됩니다.
+            const addonPath = Path.join(__dirname, "..", "addon.node");
+            this.nativeAddon = require(addonPath);
         } catch (error) {
-            throw new Error(`Failed to load native addon: ${error}`);
+            const buildPath = Path.resolve(
+                __dirname,
+                "..",
+                "..",
+                "build",
+                "Release",
+                "addon.node"
+            );
+            const distPath = Path.resolve(__dirname, "..", "addon.node");
+            throw new Error(
+                `네이티브 애드온 로드에 실패했습니다. 다음 경로들을 확인해주세요:\n1. 최종 빌드 경로: ${distPath}\n2. 컴파일 경로: ${buildPath}\n오류: ${error}`
+            );
         }
     }
 

@@ -1,4 +1,4 @@
-const {GlobalKeyboardListener} = require("./dist/index.js");
+const {GlobalKeyboardListener} = require(".");
 
 console.log("Starting native addon test...");
 

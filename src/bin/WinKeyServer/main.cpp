@@ -153,6 +153,13 @@ __declspec(dllexport) LRESULT CALLBACK KeyboardEvent(int nCode, WPARAM wParam, L
     {
         KBDLLHOOKSTRUCT key = *((KBDLLHOOKSTRUCT *)lParam);
 
+        // 가상 Shift 이벤트 필터링 로직 추가
+        // LLKHF_INJECTED 플래그가 설정된 Shift 키 이벤트를 무시합니다.
+        if ((key.vkCode == VK_SHIFT || key.vkCode == VK_LSHIFT || key.vkCode == VK_RSHIFT) && (key.flags & LLKHF_INJECTED))
+        {
+            return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+        }
+
         // 확장 키 플래그 추출 (scanCode의 상위 비트에서 확장 정보 확인)
         bool isExtended = (key.flags & LLKHF_EXTENDED) != 0;
 

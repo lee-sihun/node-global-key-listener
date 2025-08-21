@@ -154,8 +154,9 @@ __declspec(dllexport) LRESULT CALLBACK KeyboardEvent(int nCode, WPARAM wParam, L
         KBDLLHOOKSTRUCT key = *((KBDLLHOOKSTRUCT *)lParam);
 
         // 가상 Shift 이벤트 필터링 로직 추가
-        // LLKHF_INJECTED 플래그가 설정된 Shift 키 이벤트를 무시합니다.
-        if ((key.vkCode == VK_SHIFT || key.vkCode == VK_LSHIFT || key.vkCode == VK_RSHIFT) && (key.flags & LLKHF_INJECTED))
+        // LLKHF_INJECTED 플래그가 설정되었거나, 비정상적인 스캔 코드(554)를 가진 Shift 이벤트를 무시합니다.
+        if ((key.vkCode == VK_SHIFT || key.vkCode == VK_LSHIFT || key.vkCode == VK_RSHIFT) &&
+            ((key.flags & LLKHF_INJECTED) || key.scanCode == 554))
         {
             return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
         }

@@ -1,7 +1,5 @@
-import os from "os";
-import {MacKeyServer} from "./ts/MacKeyServer";
+import * as os from "os";
 import {WinKeyServer} from "./ts/WinKeyServer";
-import {X11KeyServer} from "./ts/X11KeyServer";
 import {IConfig} from "./ts/_types/IConfig";
 import {IGlobalKeyDownMap} from "./ts/_types/IGlobalKeyDownMap";
 import {IGlobalKeyListener} from "./ts/_types/IGlobalKeyListener";
@@ -14,7 +12,7 @@ export * from "./ts/_types/IGlobalKey";
 export * from "./ts/_types/IGlobalKeyDownMap";
 export * from "./ts/_types/IWindowsConfig";
 export * from "./ts/_types/IConfig";
-export { KeyboardUtils } from './ts/_utils/KeyboardUtils';
+export {KeyboardUtils} from "./ts/_utils/KeyboardUtils";
 
 /**
  * A cross-platform global keyboard listener. Ideal for setting up global keyboard shortcuts
@@ -44,19 +42,13 @@ export class GlobalKeyboardListener {
         this.listeners = [];
         this.isDown = {};
         this.config = config;
-        switch (os.platform()) {
-            case "win32":
-                this.keyServer = new WinKeyServer(this.baseListener, config.windows);
-                break;
-            case "darwin":
-                this.keyServer = new MacKeyServer(this.baseListener, config.mac);
-                break;
-            case "linux":
-                this.keyServer = new X11KeyServer(this.baseListener, config.x11);
-                break;
-            default:
-                throw Error("This OS is not supported");
+
+        // Windows 전용으로 간소화
+        if (os.platform() !== "win32") {
+            throw Error("This version only supports Windows OS");
         }
+
+        this.keyServer = new WinKeyServer(this.baseListener, config.windows);
     }
 
     /**

@@ -24,5 +24,7 @@ export declare class WinKeyServer implements IGlobalKeyServer {
      * @returns 표준화된 키 이벤트 데이터
      */
     protected _convertToGlobalKeyEvent(data: any): IGlobalKeyEvent;
+    /** addon.node 경로를 탐색하여 반환 */
+    private resolveAddonPath;
 }
 //# sourceMappingURL=WinKeyServer.d.ts.map

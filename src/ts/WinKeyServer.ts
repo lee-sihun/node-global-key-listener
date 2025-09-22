@@ -105,25 +105,106 @@ export class WinKeyServer implements IGlobalKeyServer {
 
     /** addon.node 경로를 탐색하여 반환 */
     private resolveAddonPath(): string {
+        // 환경변수로 경로 강제 지정 가능
+        const envPath = process.env.NODE_GKL_ADDON_PATH;
+        if (envPath && fs.existsSync(envPath)) {
+            return envPath;
+        }
+
         const rootDir = Path.resolve(__dirname, "..", "..");
+        const packageName = "node-global-key-listener-extended";
+
+        // Node.js ABI 버전 (Electron에서는 electron ABI)
+        const nodeAbi = process.versions.modules || "unknown";
+        const platform = process.platform;
+        const arch = process.arch;
+
         const candidates = [
+            // 1. 표준 node-gyp 빌드 경로 (개발/재빌드 후)
             Path.resolve(rootDir, "build", "Release", "addon.node"),
             Path.resolve(rootDir, "build", "Debug", "addon.node"),
-            // 과거 dist에 복사되던 위치(하위 호환)
+
+            // 2. 사전 빌드된 바이너리 경로 (배포 시 포함)
+            Path.resolve(rootDir, "bin", `${platform}-${arch}-${nodeAbi}`, "addon.node"),
+            Path.resolve(rootDir, "bin", `${platform}-${arch}`, "addon.node"),
+
+            // 3. Electron asar unpack 경로
+            ...((process as any).resourcesPath
+                ? [
+                      Path.resolve(
+                          (process as any).resourcesPath,
+                          "app.asar.unpacked",
+                          "node_modules",
+                          packageName,
+                          "build",
+                          "Release",
+                          "addon.node"
+                      ),
+                      Path.resolve(
+                          (process as any).resourcesPath,
+                          "app.asar.unpacked",
+                          "node_modules",
+                          packageName,
+                          "bin",
+                          `${platform}-${arch}-${nodeAbi}`,
+                          "addon.node"
+                      ),
+                  ]
+                : []),
+
+            // 4. 과거 dist 복사 위치 (하위 호환)
+            Path.resolve(rootDir, "dist", "addon.node"),
             Path.resolve(__dirname, "..", "addon.node"),
+
+            // 5. require.resolve를 통한 탐색 (node_modules 내부)
+            ...(() => {
+                try {
+                    const pkgPath = require.resolve(`${packageName}/package.json`);
+                    const pkgDir = Path.dirname(pkgPath);
+                    return [
+                        Path.resolve(pkgDir, "build", "Release", "addon.node"),
+                        Path.resolve(
+                            pkgDir,
+                            "bin",
+                            `${platform}-${arch}-${nodeAbi}`,
+                            "addon.node"
+                        ),
+                        Path.resolve(pkgDir, "dist", "addon.node"),
+                    ];
+                } catch {
+                    return [];
+                }
+            })(),
         ];
 
-        for (const p of candidates) {
+        // 중복 제거
+        const uniqueCandidates = [...new Set(candidates)];
+
+        for (const p of uniqueCandidates) {
             try {
-                if (fs.existsSync(p)) return p;
+                if (fs.existsSync(p)) {
+                    return p;
+                }
             } catch {
                 // ignore fs errors
             }
         }
 
-        const searched = candidates.map(p => ` - ${p}`).join("\n");
+        const searched = uniqueCandidates.map(p => `  - ${p}`).join("\n");
         throw new Error(
-            `네이티브 애드온(addon.node)을 찾을 수 없습니다. 다음 경로들을 확인해주세요:\n${searched}`
+            `네이티브 애드온 로드에 실패했습니다. 다음 경로들을 확인해주세요:\n` +
+                `1. 최종 빌드 경로: ${Path.resolve(rootDir, "dist", "addon.node")}\n` +
+                `2. 컴파일 경로: ${Path.resolve(
+                    rootDir,
+                    "build",
+                    "Release",
+                    "addon.node"
+                )}\n` +
+                `오류: Cannot find module '${Path.resolve(
+                    rootDir,
+                    "dist",
+                    "addon.node"
+                )}'`
         );
     }
 }

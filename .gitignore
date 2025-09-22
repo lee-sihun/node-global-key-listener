@@ -107,3 +107,9 @@ typings/
 
 
 eslintLog.tap
+
+# Native addon packaging
+# Exclude build outputs and local binaries (keep dist for runtime JS)
+build/
+bin/
+.research/

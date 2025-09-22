@@ -1,0 +1,23 @@
+# Exclude compiled native binary from package
+dist/addon.node
+
+# Exclude local build outputs and binaries
+build/
+bin/
+.research/
+
+# Exclude tests and coverage
+src/ts/_tests/
+coverage/
+.nyc_output/
+*.tgz
+
+# Caches and misc
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.cache
+.parcel-cache/
+.eslintcache
+.npm

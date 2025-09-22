@@ -6,14 +6,26 @@
     "main": "dist/index.js",
     "gypfile": true,
     "files": [
-        "dist"
+        "dist/index.js",
+        "dist/index.d.ts",
+        "dist/index.d.ts.map",
+        "dist/ts/**/*.js",
+        "dist/ts/**/*.d.ts",
+        "dist/ts/**/*.map",
+        "src",
+        "binding.gyp",
+        "scripts",
+        "tsconfig.json",
+        "README.md",
+        "LICENSE"
     ],
     "scripts": {
         "watch": "tsc -w",
-        "build": "npm run clean && npm run compile-addon && tsc && copyfiles -u 2 \"build/Release/addon.node\" dist",
+        "build": "npm run clean && npm run compile-addon && tsc",
         "test": "node test-native.js",
         "compile-addon": "node-gyp rebuild",
-        "clean": "rimraf build dist"
+        "clean": "rimraf build dist",
+        "prepack": "rimraf dist/addon.node dist/tsconfig.tsbuildinfo"
     },
     "repository": {
         "type": "git",

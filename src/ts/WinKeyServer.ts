@@ -4,6 +4,7 @@ import {IGlobalKeyListenerRaw} from "./_types/IGlobalKeyListenerRaw";
 import {WinGlobalKeyLookup} from "./_data/WinGlobalKeyLookup";
 import {IWindowsConfig} from "./_types/IWindowsConfig";
 import * as Path from "path";
+import * as fs from "fs";
 
 // 네이티브 애드온 인터페이스 정의
 interface NativeAddon {
@@ -30,23 +31,11 @@ export class WinKeyServer implements IGlobalKeyServer {
 
         // 네이티브 애드온 로드
         try {
-            // 빌드 후 'addon.node' 파일은 'dist' 폴더에 복사됩니다.
-            // 이 파일(WinKeyServer.js)은 'dist/ts/'에 위치하므로,
-            // addon.node에 접근하기 위한 상대 경로는 '../addon.node'가 됩니다.
-            const addonPath = Path.join(__dirname, "..", "addon.node");
+            const addonPath = this.resolveAddonPath();
             this.nativeAddon = require(addonPath);
         } catch (error) {
-            const buildPath = Path.resolve(
-                __dirname,
-                "..",
-                "..",
-                "build",
-                "Release",
-                "addon.node"
-            );
-            const distPath = Path.resolve(__dirname, "..", "addon.node");
             throw new Error(
-                `네이티브 애드온 로드에 실패했습니다. 다음 경로들을 확인해주세요:\n1. 최종 빌드 경로: ${distPath}\n2. 컴파일 경로: ${buildPath}\n오류: ${error}`
+                `네이티브 애드온 로드에 실패했습니다. 설치가 올바르게 수행되었는지 확인해주세요.\n오류: ${error}`
             );
         }
     }
@@ -112,5 +101,29 @@ export class WinKeyServer implements IGlobalKeyServer {
             isExtended: isExtended,
             _raw: JSON.stringify(data),
         };
+    }
+
+    /** addon.node 경로를 탐색하여 반환 */
+    private resolveAddonPath(): string {
+        const rootDir = Path.resolve(__dirname, "..", "..");
+        const candidates = [
+            Path.resolve(rootDir, "build", "Release", "addon.node"),
+            Path.resolve(rootDir, "build", "Debug", "addon.node"),
+            // 과거 dist에 복사되던 위치(하위 호환)
+            Path.resolve(__dirname, "..", "addon.node"),
+        ];
+
+        for (const p of candidates) {
+            try {
+                if (fs.existsSync(p)) return p;
+            } catch {
+                // ignore fs errors
+            }
+        }
+
+        const searched = candidates.map(p => ` - ${p}`).join("\n");
+        throw new Error(
+            `네이티브 애드온(addon.node)을 찾을 수 없습니다. 다음 경로들을 확인해주세요:\n${searched}`
+        );
     }
 }
